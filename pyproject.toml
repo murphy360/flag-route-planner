@@ -4,6 +4,7 @@
 name = "flag-route-planner"
 version = "0.1.0"
 description = "Plans flag install and removal routes: balanced zones, driving order and Google Maps legs."
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = ["openpyxl>=3.1"]
 
@@ -18,7 +19,7 @@ test = ["pytest>=8"]
 dev = ["ruff==0.17.4"]
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]  # 77: the SPDX license string
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
