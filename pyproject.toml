@@ -1,0 +1,25 @@
+# The standard ruff settings: 88 columns, ruff format, and the rules murphy360/standards picks. Nothing to
+# configure: add a [tool.ruff] section only for a reason, and write the reason in a comment beside it.
+[project]
+name = "flag-route-planner"
+version = "0.1.0"
+description = "Plans flag install and removal routes: balanced zones, driving order and Google Maps legs."
+requires-python = ">=3.12"
+dependencies = ["openpyxl>=3.1"]
+
+[project.scripts]
+flag-route-planner = "flag_route_planner.__main__:main"
+
+[project.optional-dependencies]
+# Installed in the Docker image so that the tests run there.
+test = ["pytest>=8"]
+# The ruff the lint and the pre-commit hook use: both run the project's pin by default. Dependabot moves it in a
+# pull request of its own, where a new ruff's findings show up; move the ruff-pre-commit rev with it.
+dev = ["ruff==0.17.4"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

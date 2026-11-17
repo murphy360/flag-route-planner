@@ -1,0 +1,3 @@
+route,name_contains,address_contains,street,city,lat,lon,note
+3,Entrance,,Oak Lane at Main Street,,40.123456,-80.123456,HOA entrance flags (one each side); pinned by hand
+5,,SR 9,410 Main Street,Springfield,,,State Route 9 is Main Street in town

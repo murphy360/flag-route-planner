@@ -1,0 +1,87 @@
+# CI from murphy360/standards (templates/ci.yml). Keep the jobs that apply to the project. Every other action is
+# pinned to a full commit SHA, with the version in a comment (the checks fail otherwise).
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+# One run per ref. A pull request's superseded run is cancelled, so a second push never waits behind the first; a
+# push to main always finishes what it started. Every job has a time limit, which is what stops a stuck job
+# holding a runner for six hours: `checks` sets its own, and a job that calls a reusable workflow cannot (GitHub
+# refuses it), so the reusable workflow's own job carries one instead.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  # The quick checks in one job: standards-check, the lint, shellcheck, actionlint and the secret scan. One runner
+  # and one checkout, so a private project is billed for one job where five reusable workflows are five. Every check
+  # runs, also after one failed, and the last lines of the step say which failed.
+  # The job is the project's own, so it names its runner and its time limit: `runs-on: [self-hosted, linux]` for a
+  # self-hosted runner, as in any job. The runner needs Docker.
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # A self-hosted runner keeps its workspace: this takes back the files a container of the job before left
+      # there, so that the checkout can replace them. On a GitHub-hosted runner it does nothing.
+      - uses: murphy360/standards/actions/take-ownership@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0  # the secret scan reads the commits of the change, so it needs the history
+      - uses: murphy360/standards/actions/checks@v3
+        with:
+          format-check: true
+          # checks: standards-check node-lint shell-lint actionlint secret-scan  # a JavaScript or TypeScript
+          #                # project: node-lint in place of python-lint. The default is the five with python-lint
+          # paths: src tools  # the lint: only these directories (default: every tracked file). A project with debt
+          #                   # lists the ones that are clean, says why beside it, and widens it as it pays down
+          # working-directory: frontend   # the lint: the directory it runs in
+          # Every check runs in full by default. `false` turns one part off; write the reason beside it:
+          # silencers: false         # no check that a skip, an xfail, a type ignore and the like carry a reason
+          # project-ruff: false      # the standard's default ruff, not the one the project pins
+          # no-inline-config: false  # node-lint: an eslint-disable comment hides a finding
+          # check-pr-template: false        # .github/pull_request_template.md is not required
+          # check-pre-commit-config: false  # .pre-commit-config.yaml is not required
+          # check-ticket-template: false    # no issue template is required in .github/ISSUE_TEMPLATE
+          # check-templates: false          # the shared text of AGENTS.md may differ from the template's
+          # check-agent-settings: false     # .claude/settings.json is not required
+          # check-ruff-version: false       # the ruff versions the project names may differ
+          # full-history: true  # the secret scan reads every commit, not only this change's: once when adopting
+      # A second lint, in another directory or for another language, is a second step. It runs after a failure too.
+      # - if: ${{ !cancelled() }}
+      #   uses: murphy360/standards/actions/checks@v3
+      #   with:
+      #     checks: node-lint
+      #     working-directory: frontend
+      #     format-check: true
+  # Each of the five checks is also a reusable workflow, a job of its own: standards-check.yml, python-lint.yml or
+  # node-lint.yml, shell-lint.yml, actionlint.yml and secret-scan.yml, at @v3, with the inputs of the action. They
+  # are deprecated: a project that calls them moves to the `checks` job. A later major removes them.
+  # A type check: pyright in basic mode for Python, the project's own tsc for TypeScript. It installs what the code
+  # imports, so it is a job of its own. A project with findings left narrows `include` in its pyright config or
+  # tsconfig.json, with the reason beside it. Add `types` to result's needs.
+  # types:
+  #   uses: murphy360/standards/.github/workflows/type-check.yml@v3
+  #   with:
+  #     install-command: pip install -r requirements.txt  # what the code imports, so that pyright sees it
+  #     # language: typescript  # instead: npm ci, then tsc --noEmit with the project's tsconfig.json
+  test:
+    uses: murphy360/standards/.github/workflows/test-docker.yml@v3
+    with:
+      command: "pytest -q"
+  # The one job a ruleset requires (templates/rulesets/main.json): whichever of the above is slow, cancelled or
+  # skipped, this is the fixed name a branch protection rule points at.
+  result:
+    name: result
+    if: always()
+    needs: [checks, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every job that ran passed
+        run: |
+          echo '${{ toJSON(needs) }}' > needs.json
+          cat needs.json
+          jq -e 'all(.[]; .result == "success" or .result == "skipped")' needs.json

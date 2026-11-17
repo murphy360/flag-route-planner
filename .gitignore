@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+# Route data holds residents' names and addresses: it never goes in the repository.
+input/
+out/
+cache/
+overrides.csv
+*.xlsx
