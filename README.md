@@ -91,3 +91,7 @@ docker run --rm -v "$PWD:/src" -w /src flag-route-planner:test pytest -q
 
 Before a push: `pip install pre-commit && pre-commit install`, then `pre-commit run --all-files`. The project
 follows [murphy360/standards](https://github.com/murphy360/standards); `AGENTS.md` has the working rules.
+
+## License
+
+MIT. See `LICENSE`.
